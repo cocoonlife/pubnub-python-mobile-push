@@ -120,6 +120,10 @@ elif sys.platform.startswith("win"):
     }
 """
 
+#declare constants
+MOBILE_GW_GCM = 'gcm'
+MOBILE_GW_APNS = 'apns'
+
 ##################################
 
 
@@ -539,6 +543,94 @@ class PubnubBase(object):
             'ttl'       : ttl,
             'pnsdk'     : self.pnsdk
         }, callback=callback, error=error)
+
+
+    def mobile_gw_add(self, *args, **kwargs):
+        """
+        Attach a registered APNS or GCM device to a Pubnub channel using the mobile gateway
+
+        Args:
+            channel:    (string) (required)
+                        The name of the channel the device will be added to
+
+            device_id:  (string) (required)
+                        Either the GCM or APNS id of the device that is being added
+
+            gw_type:    (string) (required)
+                        Supply either Pubnub.MOBILE_GW_GCM or Pubnub.MOBILE_GW_APNS
+
+            callback:   (function) (optional)
+                        A callback method can be passed to the method.
+                        If set, the api works in async mode. 
+                        Required argument when working with twisted or tornado 
+
+            error:      (function) (optional)
+                        An error method can be passed to the method.
+                        If set, the api works in async mode. 
+                        Required argument when working with twisted or tornado .
+
+        Returns:
+            Returns a dict in sync mode i.e. when callback argument is not given
+            The dict returned contains values with keys 'message' and 'payload'
+        """
+        return self._mobile_gw_provision(*args, op='add', **kwargs)
+
+    def mobile_gw_remove(self, *args, **kwargs):
+        """
+        Remove a device from the mobile gateway
+
+        Args:
+            channel:    (string) (required)
+                        The name of the channel the device will be removed from
+
+            device_id:  (string) (required)
+                        Either the GCM or APNS id of the device that is being removed
+
+            callback:   (function) (optional)
+                        A callback method can be passed to the method.
+                        If set, the api works in async mode. 
+                        Required argument when working with twisted or tornado 
+
+            error:      (function) (optional)
+                        An error method can be passed to the method.
+                        If set, the api works in async mode. 
+                        Required argument when working with twisted or tornado .
+
+        Returns:
+            Returns a dict in sync mode i.e. when callback argument is not given
+            The dict returned contains values with keys 'message' and 'payload'
+        """
+        return self._mobile_gw_provision(*args, op='remove', **kwargs)
+
+    def _mobile_gw_provision(self, channel=None, op=None, device_id=None, gw_type=None, callback=None, error=None):
+        # modify a channel with respect to it's mobile/device_id
+
+        query = dict()
+        # check this is a supported operation
+        if op=='add':
+            # add requires gw_type
+            if gw_type not in [MOBILE_GW_GCM, MOBILE_GW_APNS]:
+                raise ValueError("unsupported gw_type param")
+            query['gw_type'] = gw_type
+            query['add'] = channel
+
+        elif op != 'remove':
+            raise ValueError("op must be one of add or remove")
+
+        # if ok add op to query params
+        query[op] = channel
+        
+        if self.auth_key:
+            query['auth'] = self.auth_key
+
+        return self._request(
+            {
+                "urlcomponents": ['v1', 'push', 'sub-key', self.subscribe_key, 'devices', device_id],
+                'urlparams': query
+            },
+            self._return_wrapped_callback(callback),
+            self._return_wrapped_callback(error)
+        )
 
     def audit(self, channel=None, channel_group=None, auth_key=None, callback=None, error=None):
         """Method for fetching permissions from pubnub servers.
