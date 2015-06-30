@@ -616,7 +616,7 @@ class PubnubBase(object):
             # add requires gw_type
             if gw_type not in [MOBILE_GW_GCM, MOBILE_GW_APNS]:
                 raise ValueError("unsupported gw_type param")
-            query['gw_type'] = gw_type
+            query['type'] = gw_type
             query['add'] = channel
 
         elif op != 'remove':
