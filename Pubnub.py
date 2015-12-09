@@ -791,8 +791,7 @@ class PubnubBase(object):
             callback=self._return_wrapped_callback(callback),
             error=self._return_wrapped_callback(error))
 
-
-    def publish(self, channel, message, callback=None, error=None):
+    def publish(self, channel, message, store=True, callback=None, error=None):
         """Publishes data on a channel.
 
         The publish() method is used to send a message to all subscribers of a channel.
@@ -818,6 +817,9 @@ class PubnubBase(object):
                         An error method can be passed to the method.
                         If set, the api works in async mode. 
                         Required argument when working with twisted or tornado
+            store:      (optional)
+                        Explicitly set to False to not persist this message with the storage and
+                        playback API
 
         Returns:
             Sync Mode  : list
@@ -834,19 +836,31 @@ class PubnubBase(object):
         """
 
         message = self.encrypt(message)
-
+        # build up url params
+        url_params = {
+            'auth': self.auth_key,
+            'pnsdk' : self.pnsdk,
+        }
+        if not store:
+            url_params['store'] = 0
         ## Send Message
-        return self._request({"urlcomponents": [
-            'publish',
-            self.publish_key,
-            self.subscribe_key,
-            '0',
-            channel,
-            '0',
-            message
-        ], 'urlparams': {'auth': self.auth_key, 'pnsdk' : self.pnsdk}},
+        return self._request(
+            {
+                "urlcomponents": [
+                    'publish',
+                    self.publish_key,
+                    self.subscribe_key,
+                    '0',
+                    channel,
+                    '0',
+                    message
+                ], 
+                'urlparams': url_params
+            },
             callback=self._return_wrapped_callback(callback),
-            error=self._return_wrapped_callback(error))
+            error=self._return_wrapped_callback(error)
+        )
+
 
     def presence(self, channel, callback, error=None):
         """Subscribe to presence events on a channel.
