@@ -585,8 +585,9 @@ class PubnubBase(object):
         Remove a device from the mobile gateway
 
         Args:
-            channel:    (string) (required)
+            channel:    (string) 
                         The name of the channel the device will be removed from
+                        If omitted will remove the device from all channels
 
             device_id:  (string) (required)
                         Either the GCM or APNS id of the device that is being removed
@@ -611,6 +612,7 @@ class PubnubBase(object):
         # modify a channel with respect to it's mobile/device_id
 
         query = dict()
+        url_components = ['v1', 'push', 'sub-key', self.subscribe_key, 'devices', device_id]
         # check this is a supported operation
         if op=='add':
             # add requires gw_type
@@ -618,19 +620,25 @@ class PubnubBase(object):
                 raise ValueError("unsupported gw_type param")
             query['type'] = gw_type
             query['add'] = channel
+        elif op=='remove':
+            query['type'] = gw_type
+            if channel:
+                query[op] = channel
+            else:
+                url_components.append(op)
+        elif not op:
+            # we're doing a list
+            query['type'] = gw_type
+        else:
+            # the only other supported operation is remove
+            raise ValueError("op must be one of 'add', 'remove' or None")
 
-        elif op != 'remove':
-            raise ValueError("op must be one of add or remove")
-
-        # if ok add op to query params
-        query[op] = channel
-        
         if self.auth_key:
             query['auth'] = self.auth_key
 
         return self._request(
             {
-                "urlcomponents": ['v1', 'push', 'sub-key', self.subscribe_key, 'devices', device_id],
+                "urlcomponents": url_components,
                 'urlparams': query
             },
             self._return_wrapped_callback(callback),
